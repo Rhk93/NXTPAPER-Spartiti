@@ -1,0 +1,48 @@
+name: Compila APK Leggio Spartiti
+
+on:
+  push:
+    paths:
+      - 'LeggioSpartiti.zip'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Estrai lo zip
+        run: unzip -o LeggioSpartiti.zip -d progetto
+
+      - name: Scarica il lettore PDF (pdf.js)
+        run: |
+          curl -fL -o progetto/app/src/main/assets/pdf.min.js https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js
+          curl -fL -o progetto/app/src/main/assets/pdf.worker.min.js https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compila l'APK
+        working-directory: progetto
+        run: gradle assembleRelease --no-daemon
+
+      - name: Rinomina l'APK
+        run: cp progetto/app/build/outputs/apk/release/app-release.apk LeggioSpartiti.apk
+
+      - name: Crea la Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: Leggio Spartiti 1.${{ github.run_number }}
+          files: LeggioSpartiti.apk
